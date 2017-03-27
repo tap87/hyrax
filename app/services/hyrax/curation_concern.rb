@@ -5,12 +5,40 @@ module Hyrax
 
     # A consumer of this method can inject a different factory
     # into this class in order to change the behavior of this method.
-    # @param [ActiveFedora::Base] curation_concern a work to be updated
-    # @param [Ability] current_ability the permission object for depositing this
-    #   work.
     # @return [#create, #update] an actor that can create and update the work
-    def self.actor(curation_concern, current_ability)
-      actor_factory.build(curation_concern, current_ability)
+    def self.actor
+      @work_middleware_stack ||= actor_factory.build(Actors::Terminator.new)
+    end
+
+    # NOTE: I don't know why this middleware doesn't use the BaseActor - Justin
+    # @return [#create] an actor for creating the FileSet
+    def self.file_set_create_actor
+      @file_set_create_actor ||= begin
+        stack = ActionDispatch::MiddlewareStack.new.tap do |middleware|
+          middleware.use Actors::InterpretVisibilityActor
+        end
+        stack.build(Actors::Terminator.new)
+      end
+    end
+
+    # @return [#update] an actor for updating the FileSet
+    def self.file_set_update_actor
+      @file_set_update_actor ||= begin
+        stack = ActionDispatch::MiddlewareStack.new.tap do |middleware|
+          middleware.use Actors::InterpretVisibilityActor
+          middleware.use Actors::BaseActor
+        end
+        stack.build(Actors::Terminator.new)
+      end
+    end
+
+    class Environment
+      def initialize(curation_concern, current_ability)
+        @curation_concern = curation_concern
+        @current_ability = current_ability
+      end
+
+      attr_reader :curation_concern, :current_ability
     end
   end
 end

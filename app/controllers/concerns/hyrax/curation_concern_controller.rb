@@ -42,7 +42,7 @@ module Hyrax
     end
 
     def create
-      if actor.create(attributes_for_actor)
+      if actor.create(actor_environment)
         after_create_response
       else
         respond_to do |wants|
@@ -84,7 +84,7 @@ module Hyrax
     end
 
     def update
-      if actor.update(attributes_for_actor)
+      if actor.update(actor_environment)
         after_update_response
       else
         respond_to do |wants|
@@ -99,7 +99,8 @@ module Hyrax
 
     def destroy
       title = curation_concern.to_s
-      return unless actor.destroy
+      env = Actors::Environment.new(curation_concern, current_ability, {})
+      return unless actor.destroy(env)
       Hyrax.config.callback.run(:after_destroy, curation_concern.id, current_user)
       after_destroy_response(title)
     end
@@ -122,7 +123,7 @@ module Hyrax
       end
 
       def actor
-        @actor ||= Hyrax::CurationConcern.actor(curation_concern, current_ability)
+        @actor ||= Hyrax::CurationConcern.actor
       end
 
       def presenter
@@ -169,6 +170,10 @@ module Hyrax
           wants.html { redirect_to main_app.search_catalog_path }
           wants.json { render_json_response(response_type: :deleted, message: "Deleted #{curation_concern.id}") }
         end
+      end
+
+      def actor_environment
+        Actors::Environment.new(curation_concern, current_ability, attributes_for_actor)
       end
 
       def attributes_for_actor
