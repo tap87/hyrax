@@ -16,7 +16,7 @@
 <%= stylesheet_link_tag 'application' %>
 
 <!-- application js -->
-<%= javascript_include_tag 'application' %>
+<%= javascript_include_tag 'application', defer: true %>
 <%= tinymce_assets if can? :update, ContentBlock %>
 <%= render 'shared/appearance_styles' %>
 
